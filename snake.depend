@@ -1,0 +1,7 @@
+# depslib dependency file v1.0
+1754376284 source:/home/usr/Documents/snake/main.cpp
+	<iostream>
+	<thread>
+	<vector>
+	<mutex>
+
