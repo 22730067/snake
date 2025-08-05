@@ -1,7 +1,13 @@
 # depslib dependency file v1.0
-1754376284 source:/home/usr/Documents/snake/main.cpp
+1754380919 source:/home/usr/Documents/snake/main.cpp
 	<iostream>
+	<mutex>
 	<thread>
 	<vector>
-	<mutex>
+	<conio.h>
+	<windows.h>
+	<termios.h>
+	<unistd.h>
+	<cstdio>
+	<sys/ioctl.h>
 

@@ -1,3 +1,7 @@
+// A cross-platform example to capture real-time arrow key input.
+// This code uses preprocessor directives to handle platform-specific libraries
+// for Windows and Unix-like systems (Linux, macOS).
+
 #include <iostream>
 #include <mutex>
 #include <thread>
@@ -10,13 +14,39 @@ std::mutex cout_mutex;
 
 #ifdef _WIN32
     #include <conio.h>
+    #include <windows.h>
+
+    // Store original code pages to restore later
+    UINT original_input_cp;
+    UINT original_output_cp;
+
+    // Sets the console to UTF-8 mode on Windows.
+    void set_utf8_mode() {
+        // Save original code pages
+        original_input_cp = GetConsoleCP();
+        original_output_cp = GetConsoleOutputCP();
+
+        // Set to UTF-8
+        SetConsoleCP(CP_UTF8);
+        SetConsoleOutputCP(CP_UTF8);
+    }
+
+    // Restores the original console code pages on Windows.
+    void restore_utf8_mode() {
+        SetConsoleCP(original_input_cp);
+        SetConsoleOutputCP(original_output_cp);
+    }
 
     void set_terminal_mode() {
+        // No special setup is required for conio.h's _getch()
     }
 
     void restore_terminal_mode() {
+        // No special cleanup is required
     }
 
+    // Function to get a single character from the console on Windows.
+    // Handles the two-character sequence for special keys like arrows.
     int get_arrow_key() {
         int key = _getch();
         if (key == 0 || key == 0xE0) { // Special key pressed
@@ -26,8 +56,6 @@ std::mutex cout_mutex;
                 case 80: return 2; // Down
                 case 77: return 3; // Right
                 case 75: return 4; // Left
-                case 71: return 5; // q
-                case 51: return 5; // Q
             }
         }
         return 0; // Not an arrow key
@@ -37,7 +65,6 @@ std::mutex cout_mutex;
     #include <termios.h>
     #include <unistd.h>
     #include <cstdio>
-    #include <sys/ioctl.h>
 
     termios oldt;
 
@@ -48,10 +75,6 @@ std::mutex cout_mutex;
         newt = oldt;
         newt.c_lflag &= ~(ICANON | ECHO);
         tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-        winsize ws;
-        ws.ws_row = 120;
-        ws.ws_col = 48;
-        ioctl(STDOUT_FILENO, TIOCSWINSZ, &ws);
     }
 
     // Restores the terminal to its original state.
@@ -73,66 +96,67 @@ std::mutex cout_mutex;
                 case 'D': return 4; // Left
             }
         }
-        if (key == 'q' || key == 'Q') return 5;
         return 0; // Not an arrow key
     }
 
 #endif
-////////////////////////////////////////////////////////////////////////////////////////////////
-
-enum INPUT_KEY {
-    LEFT,
-    RIGHT,
-    UP,
-    DOWN,
-    QUIT,
-    IDLE
-};
-
-INPUT_KEY global_key = IDLE;
-int status = 0;
 
 // A function that will be executed by a thread. It captures arrow key input.
 void input_thread_function() {
-    int key;
-    key = get_arrow_key();
-    if (key != 0) {
+    // Lock guard to protect the output
+    {
         std::lock_guard<std::mutex> lock(cout_mutex);
-        switch (key) {
-            case 1: global_key = UP; break;
-            case 2: global_key = DOWN; break;
-            case 3: global_key = RIGHT; break;
-            case 4: global_key = LEFT; break;
-            case 5: status = 1; break;
-        }
+        std::cout << "Input thread started. Press arrow keys. Press 'q' to quit." << std::endl;
     }
-}
 
-void print_thread_function() {
+    int key;
+    do {
+        key = get_arrow_key();
+        if (key != 0) {
+            std::lock_guard<std::mutex> lock(cout_mutex);
+            switch (key) {
+                case 1: std::cout << "Up Arrow press▄ed." << std::endl; break;
+                case 2: std::cout << "Down Arrow pr▄essed." << std::endl; break;
+                case 3: std::cout << "Right Arrow▄ pressed." << std::endl; break;
+                case 4: std::cout << "Left Arr▄ow pressed." << std::endl; break;
+            }
+        }
+    } while (key != 'q'); // Loop until 'q' is pressed
+
     std::lock_guard<std::mutex> lock(cout_mutex);
-    if (global_key == UP) std::cout << "up\n";
-    else if (global_key == DOWN) std::cout << "down\n";
-    else if (global_key == LEFT) std::cout << "left\n";
-    else if (global_key == RIGHT) std::cout << "right\n";
+    std::cout << "Input thread finished." << std::endl;
 }
 
 int main() {
+    #ifdef _WIN32
+        set_utf8_mode();
+        {
+            std::lock_guard<std::mutex> lock(cout_mutex);
+            std::cout << "UTF-8 mode enabled on Windows. Test characters: " << "你好, 世界!" << std::endl;
+        }
+    #else
+        {
+            std::lock_guard<std::mutex> lock(cout_mutex);
+            std::cout << "This program does not change the console size on Unix-like systems." << std::endl;
+        }
+    #endif
+
     set_terminal_mode(); // Set terminal to raw mode for real-time input
 
-    while(status == 0) {
-        std::thread input_thread(input_thread_function);
-        std::thread print_thread(print_thread_function);
-        if (input_thread.joinable()) {
-            input_thread.join();
-        }
-        if (print_thread.joinable()) {
-            print_thread.join();
-        }
+    // Create and start the input thread
+    std::thread input_thread(input_thread_function);
 
-    }
+    // Wait for the input thread to finish
+    input_thread.join();
 
     restore_terminal_mode(); // Restore terminal to normal mode
+
+    std::lock_guard<std::mutex> lock(cout_mutex);
     std::cout << "Main thread exiting." << std::endl;
+
+    #ifdef _WIN32
+        restore_utf8_mode();
+    #endif
 
     return 0;
 }
