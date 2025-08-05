@@ -38,7 +38,7 @@ key_press snake_direction = RIGHT;
 int state = 1;
 int debug = 0;
 
-const int width = 80;
+const int width = 70;
 const int height = 40;
 
 std::vector<std::vector<int>> board(height,std::vector<int>(width,0));
@@ -247,9 +247,11 @@ void print_thread_function() {
             }
         }
     }
+    std::cout.flush();
 }
 
 void init_board() {
+    std::cout << "\x1b[?25l";
     for (int i = 0; i < width; i++)
     {
         board[0][i] = 1;
@@ -270,7 +272,7 @@ int main() {
     while (state == 1)
     {
         std::thread input_thread(input_thread_function);
-        std:: thread print_thread(print_thread_function);
+        std::thread print_thread(print_thread_function);
         if (input_thread.joinable())
             input_thread.join();
         if (print_thread.joinable())
