@@ -242,10 +242,11 @@ void print_thread_function() {
                 }
                 else
                 {
-                    //std::cout << " ";
+                    std::cout << " ";
                 }
             }
         }
+        std::cout << '\n';
     }
     std::cout.flush();
 }
