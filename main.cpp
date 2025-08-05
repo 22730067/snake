@@ -242,7 +242,7 @@ void print_thread_function() {
                 }
                 else
                 {
-                    std::cout << " ";
+                    //std::cout << " ";
                 }
             }
         }
