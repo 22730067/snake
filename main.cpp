@@ -96,6 +96,10 @@ std::vector<std::vector<int>> change_board(height,std::vector<int>(width,1));
             return; // Error setting mode
         }
     }
+
+    void hide_cursor() {
+        std::cout << "\x1b[?25l";
+    }
 #else
     void set_terminal_mode() {
         termios newt;
@@ -141,6 +145,13 @@ std::vector<std::vector<int>> change_board(height,std::vector<int>(width,1));
 
     void enable_ansi_escape_codes() {
         // No need action
+    }
+
+    void hide_cursor() {
+        if (isatty(STDOUT_FILENO))
+        {
+            std::cout << "\x1b[?25l";
+        }
     }
 #endif
 // ▄--█--------------------------------------------------------------------------------------
@@ -252,7 +263,7 @@ void print_thread_function() {
 }
 
 void init_board() {
-    std::cout << "\x1b[?25l";
+    hide_cursor();
     for (int i = 0; i < width; i++)
     {
         board[0][i] = 1;
