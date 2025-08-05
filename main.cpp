@@ -36,7 +36,13 @@ key_press direction = RIGHT;
 key_press snake_direction = RIGHT;
 
 int state = 1;
+int debug = 0;
 
+const int width = 80;
+const int height = 40;
+
+std::vector<std::vector<int>> board(height,std::vector<int>(width,0));
+std::vector<std::vector<int>> change_board(height,std::vector<int>(width,1));
 // {function}================================================================================
 #ifdef _WIN32
     void set_terminal_mode() {
@@ -72,6 +78,23 @@ int state = 1;
     void restore_utf8_mode() {
         SetConsoleCP(original_input_cp);
         SetConsoleOutputCP(original_output_cp);
+    }
+
+    void enable_ansi_escape_codes() {
+        HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+        if (hOut == INVALID_HANDLE_VALUE) {
+            return; // Error getting handle
+        }
+
+        DWORD dwMode = 0;
+        if (!GetConsoleMode(hOut, &dwMode)) {
+            return; // Error getting mode
+        }
+
+        dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+        if (!SetConsoleMode(hOut, dwMode)) {
+            return; // Error setting mode
+        }
     }
 #else
     void set_terminal_mode() {
@@ -115,8 +138,12 @@ int state = 1;
     void restore_utf8_mode() {
         // No need action
     }
+
+    void enable_ansi_escape_codes() {
+        // No need action
+    }
 #endif
-// ▄-----------------------------------------------------------------------------------------
+// ▄--█--------------------------------------------------------------------------------------
 
 // A function that will be executed by a thread. It captures key input.
 void input_thread_function() {
@@ -154,7 +181,7 @@ void input_thread_function() {
     }
 }
 
-void print_thread_function() {
+void debug_input() {
     key_press key;
     {
         std::lock_guard<std::mutex> lock(direction_mutex);
@@ -182,10 +209,64 @@ void print_thread_function() {
     }
 }
 
+void goto_xy(int x, int y) {
+    std::cout << "\x1b[" + std::to_string(x+1) + ";" + std::to_string(y+1) + "H";
+}
+
+void print_thread_function() {
+    if (debug)
+    {
+        debug_input();
+    }
+    for (int i = 0; i < height; i+=2)
+    {
+        for (int j = 0; j < width; j++)
+        {
+            if (change_board[i][j] == 1)
+            {
+                std::lock_guard<std::mutex> lock(cout_mutex);
+                change_board[i][j] = 0;
+                change_board[i+1][j] = 0;
+                goto_xy(i/2,j);
+                if (board[i][j] == 1 && board[i+1][j] == 1)
+                {
+                    std::cout << "█";
+                }
+                else if (board[i][j] == 1 && board[i+1][j] == 0)
+                {
+                    std::cout << "▀";
+                }
+                else if (board[i][j] == 0 && board[i+1][j] == 1)
+                {
+                    std::cout << "▄";
+                }
+                else
+                {
+                    std::cout << " ";
+                }
+            }
+        }
+    }
+}
+
+void init_board() {
+    for (int i = 0; i < width; i++)
+    {
+        board[0][i] = 1;
+        board[height-1][i] = 1;
+    }
+    for (int j = 0; j < height; j++)
+    {
+        board[j][0] = 1;
+        board[j][width-1] = 1;
+    }
+}
+
 int main() {
     set_utf8_mode();
     set_terminal_mode();
-
+    enable_ansi_escape_codes();
+    init_board();
     while (state == 1)
     {
         std::thread input_thread(input_thread_function);
