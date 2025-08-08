@@ -36,7 +36,7 @@ key_press direction = RIGHT;
 key_press snake_direction = RIGHT;
 
 int state = 1;
-int debug = 0;
+int debug = 1;
 
 const int width = 70;
 const int height = 40;
@@ -62,6 +62,7 @@ std::vector<std::vector<int>> change_board(height,std::vector<int>(width,1));
                 case 80: return DOWN;
                 case 77: return RIGHT;
                 case 75: return LEFT;
+                case 27: return ESCAPE_KEY; // Escape key
             }
         }
         if (key == 27) return ESCAPE_KEY;
@@ -156,6 +157,9 @@ std::vector<std::vector<int>> change_board(height,std::vector<int>(width,1));
 #endif
 // ▄--█--------------------------------------------------------------------------------------
 
+void goto_xy(int, int);
+void clear_screen();
+
 // A function that will be executed by a thread. It captures key input.
 void input_thread_function() {
     key_press key = get_key();
@@ -216,6 +220,7 @@ void debug_input() {
     }
     {
         std::lock_guard<std::mutex> lock(cout_mutex);
+        goto_xy(2,2);
         std::cout << "current direction: " << output;
     }
 }
@@ -257,13 +262,13 @@ void print_thread_function() {
                 }
             }
         }
-        std::cout << '\n';
     }
     std::cout.flush();
 }
 
 void init_board() {
     hide_cursor();
+    clear_screen();
     for (int i = 0; i < width; i++)
     {
         board[0][i] = 1;
@@ -274,6 +279,10 @@ void init_board() {
         board[j][0] = 1;
         board[j][width-1] = 1;
     }
+}
+
+void clear_screen() {
+    std::cout << "\033[2J\033[1;1H";
 }
 
 int main() {
@@ -291,8 +300,8 @@ int main() {
             print_thread.join();
     }
 
-    restore_terminal_mode();
-
+    //restore_terminal_mode();
+    clear_screen();
     std::lock_guard<std::mutex> lock(cout_mutex);
     std::cout << "Main thread exiting." << std::endl;
 
